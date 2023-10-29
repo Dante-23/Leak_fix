@@ -23,6 +23,10 @@ using namespace std;
         * Does not consider objects which are created but no reference by any global object. 
         *   Here our tool will report leak but it might not be a leak. 
         * If the struct members are private or protected, then it is not possible to access them by our tool. 
+
+    TODO :-
+        * Build using makefile. Build as static library. 
+        * Add simple documentation. 
 */
 
 void limitation_1() {
@@ -39,7 +43,7 @@ void limitation_1() {
     emp_t *emp1 = (emp_t*) calloc(1, sizeof(emp_t));
     des_t *des1 = (des_t*) calloc(1, sizeof(des_t));
     // Storing reference in unsigned int. C/C++ allows it. Java doesn't. 
-    emp1->designation = (unsigned int)des1;
+    emp1->designation = (unsigned long long)des1;
     // We can get back the object like this. 
     des_t *designation = (des_t*)emp1->designation;
     // Here there will be no leak but our tool will detect leak. 
