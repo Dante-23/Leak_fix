@@ -2,6 +2,65 @@
 #include <iostream>
 using namespace std;
 
+/*
+    Why java have garbage collection but C/C++ does not ?
+        * Java in interpreted. That means there is a process (JVM) which is monitoring our process. 
+            Hence it is easier to count references to a memory location and detect when the reference count
+            becomes zero. 
+        * C/C++ run as machine executable without any monitoring. Hence it is very difficult (close to impossible)
+            to maintain the reference count of a memory location. 
+        * In java, there are no pointers but references and object can only be created in heap. Hence it is easier 
+            to decide that a particular reference is pointing to a heap memory location. 
+        * In C/C++, there are pointers which can point to almost any memory section (heap, stack, data, bss etc). Not very easy
+            to decide whether a pointer is pointing to heap section or not. 
+    This leak library has many limitations :-
+        * Storing pointer of an object to a int variable (refer limitation_1()).
+        * When a pointer in a structure member points to a non-heap memory location. 
+        *   Java does not allow this. 
+        * Embedded objects (refer limitation_2()). We cannot have embedded objects in java. 
+        *   When we embed objects in java, we are actually storing its reference. 
+        * No support for unions and classes. Very difficult to handle them. 
+        * Does not consider objects which are created but no reference by any global object. 
+        *   Here our tool will report leak but it might not be a leak. 
+        * If the struct members are private or protected, then it is not possible to access them by our tool. 
+*/
+
+void limitation_1() {
+    struct emp_t {
+        char name[32];
+        unsigned int designation;
+    };
+
+    struct des_t {
+        char name[32];
+        int job_code;
+    };
+
+    emp_t *emp1 = (emp_t*) calloc(1, sizeof(emp_t));
+    des_t *des1 = (des_t*) calloc(1, sizeof(des_t));
+    // Storing reference in unsigned int. C/C++ allows it. Java doesn't. 
+    emp1->designation = (unsigned int)des1;
+    // We can get back the object like this. 
+    des_t *designation = (des_t*)emp1->designation;
+    // Here there will be no leak but our tool will detect leak. 
+}
+
+void limitation_2() {
+    struct des_t {
+        char name[32];
+    };
+    struct emp_t {
+        char name[32];
+        // This will store the complete struct. 
+        struct des_t des;
+    };
+    des_t *des = (des_t*) calloc(1, sizeof(des_t));
+    emp_t *emp = (emp_t*) calloc(1, sizeof(emp_t));
+    // Storing the complete object. Not pointer. 
+    // There will be no leak but our tool will report leak. 
+    emp->des = *des;
+}
+
 void test_1() {
     struct emp_t {
         char emp_name[30];
