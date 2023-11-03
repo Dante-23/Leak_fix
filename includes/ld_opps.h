@@ -103,6 +103,7 @@ protected:
         register_struct("float", sizeof(float), NULL, 0);
         register_struct("double", sizeof(double), NULL, 0);
         register_struct("char", sizeof(char), NULL, 0);
+        register_struct("long", sizeof(unsigned long long), NULL, 0);
     }
     object_db_rec_t* get_next_root_object(object_db_rec_t *starting);
 public:
@@ -156,6 +157,7 @@ class conservative_leak_detector : public memory_leak_algorithm_graph {
 private:
     std::set<unsigned long long> global_addresses;
     void scan_stack();
+    void scan_heap();
 public:
     conservative_leak_detector(printer *p_printer) :
         memory_leak_algorithm_graph(p_printer) {}

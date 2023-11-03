@@ -125,8 +125,9 @@ int *ptr;
 double k = 2.5;
 
 void test_2() {
-    long long ptr;
+    static long long ptr;
     struct node_t {
+        unsigned long long ptr;
         node_t *next;
     };
     field_info_t infos1[] = {
@@ -142,9 +143,10 @@ void test_2() {
     ld.print_structure_db();
 
     node_t *node1 = (node_t*) ld.xcalloc("node_t", 1);
-    // node_t *node2 = (node_t*) ld.xcalloc("node_t", 1);
+    node_t *node2 = (node_t*) ld.xcalloc("node_t", 1);
 
-    ptr = (long long)node1;
+    // node2->ptr = (unsigned long long) node1;
+    // node2->next = node1;
 
     ld.print_object_db();
     ld.run();

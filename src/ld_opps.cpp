@@ -1,4 +1,5 @@
 #include "../includes/ld_opps.h"
+#include <math.h>
 
 const char *DATA_TYPE[] = {"UINT8", "UINT32", "INT32",
                      "CHAR", "OBJ_PTR", "VOID_PTR", "FLOAT",
@@ -310,6 +311,9 @@ void conservative_leak_detector::scan_memory() {
 
     // Scanning stack section
     scan_stack();
+
+    // Scanning heap section
+    scan_heap();
 }
 
 void conservative_leak_detector::scan_stack() {
@@ -348,4 +352,27 @@ void conservative_leak_detector::run() {
 
 void conservative_leak_detector::register_addr_of_global_variables(void *address) {
     global_addresses.insert((unsigned long long)address);
+}
+
+void conservative_leak_detector::scan_heap() {
+    object_db_rec_t *head = object_db->head;
+    while(head != NULL) {
+        struct_db_rec_t *struct_rec = head->struct_rec;
+        void *start_address = head->ptr;
+        unsigned int largest_offset = 0;
+        for (unsigned int i = 0; i < struct_rec->n_fields; i++) {
+            largest_offset = std::max(largest_offset, struct_rec->fields[i].offset);
+        }
+        void *end_address = head->ptr + largest_offset;
+        for (unsigned int *ptr = (unsigned int*)start_address; 
+            ptr <= (unsigned int*)end_address;
+            ptr++) {
+            unsigned long long *ptr1 = (unsigned long long*) ptr;
+            object_db_rec_t *obj = object_db_look_up((void*)(*ptr1));
+            printf("Value at address %p is %p\n", ptr1, *ptr1);
+            if (obj == NULL) continue;
+            obj->is_visited = true;
+        }
+        head = head->next;
+    }
 }
