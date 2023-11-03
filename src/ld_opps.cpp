@@ -271,6 +271,7 @@ void memory_leak_algorithm_graph::init_algorithm(){
 }
 
 void memory_leak_algorithm_graph::run() {
+    printf("Running memory_leak_algorithm_graph::run()\n");
     init_algorithm();
     object_db_rec_t *root_obj = get_next_root_object(NULL);
     while(root_obj) {
@@ -295,4 +296,56 @@ void memory_leak_algorithm_graph::report_leaked_objects() {
             printf("\n\n");
         }
     }
+}
+
+void conservative_leak_detector::scan_memory() {
+    // Scanning data section variables
+    printf("Scanning data section start\n");
+    for (unsigned long long address: global_addresses) {
+        object_db_rec_t *obj = object_db_look_up((void*)(*((unsigned long long*)address)));
+        if (obj == NULL) continue;
+        obj->is_visited = true;
+    }
+    printf("Scanning data section end\n");
+
+    // Scanning stack section
+    scan_stack();
+}
+
+void conservative_leak_detector::scan_stack() {
+    printf("Scanning stack section start\n");
+    unsigned long long stack_top, stack_bottom;
+    static int initted;
+    FILE *statfp;
+    if (initted)
+        return;
+    initted = 1;
+    statfp = fopen("/proc/self/stat", "r");
+    assert(statfp != NULL);
+    fscanf(statfp,
+           "%*d %*s %*c %*d %*d %*d %*d %*d %*u "
+           "%*lu %*lu %*lu %*lu %*lu %*lu %*ld %*ld "
+           "%*ld %*ld %*ld %*ld %*llu %*lu %*ld "
+           "%*lu %*lu %*lu %lu", &stack_bottom);
+    fclose(statfp);
+    asm volatile ("mov %%rsp, %0" : "=r" (stack_top));
+    
+    for (unsigned int *ptr = (unsigned int*)stack_top; 
+        ptr <= (unsigned int*)stack_bottom; ptr++) {
+        unsigned int value = *ptr;
+        object_db_rec_t *obj = object_db_look_up((void*)value);
+        if (obj == NULL) continue;
+        obj->is_visited = true;
+    }
+    printf("Scanning stack section end\n");
+}
+
+void conservative_leak_detector::run() {
+    memory_leak_algorithm_graph::run();
+    printf("Running conservative_leak_detector::run()\n");
+    scan_memory();
+}
+
+void conservative_leak_detector::register_addr_of_global_variables(void *address) {
+    global_addresses.insert((unsigned long long)address);
 }

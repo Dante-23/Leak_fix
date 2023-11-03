@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string.h>
 #include <assert.h>
+#include <set>
 
 #define MAX_STRUCTURE_NAME_SIZE 128
 #define MAX_FIELD_NAME_SIZE     128
@@ -149,6 +150,18 @@ public:
     memory_leak_detector(p_printer) {}
     void run();
     void report_leaked_objects();
+};
+
+class conservative_leak_detector : public memory_leak_algorithm_graph {
+private:
+    std::set<unsigned long long> global_addresses;
+    void scan_stack();
+public:
+    conservative_leak_detector(printer *p_printer) :
+        memory_leak_algorithm_graph(p_printer) {}
+    void register_addr_of_global_variables(void *address);
+    void run();
+    void scan_memory();
 };
 
 #endif

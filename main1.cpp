@@ -24,8 +24,17 @@ using namespace std;
         *   Here our tool will report leak but it might not be a leak. 
         * If the struct members are private or protected, then it is not possible to access them by our tool. 
 
+    Many types of garbage collectors :-
+        * Reference counting garbage collector - very difficult to implement for fully compiled languages. 
+        * Tracing garbage collectors - same root object concept (mark and sweep). 
+        * But, as I mentioned, this is only one of many different kinds of Tracing GCs, and is a very simple one with many disadvantages. The two major disadvantages are that scanning the entire memory is expensive and leaving the live objects where they are and only collecting the dead objects in between leads to memory fragmentation.
+            Another very simple but much faster Tracing GC is Henry Baker's Semi-Space GC. The Semi-Space GC "wastes" half of the available memory, but gains a lot of performance for it. The way the Semi-Space GC works is that it divides the available memory into two halves, let's call them A and B. Only one of the two halves is active at any one time, meaning new objects only get allocated in one of the two halves.
+            We start out with half A: The GC "traces" the "live" objects just as described above, but instead of "marking" them, it copies them to half B. That way, once the "tracing" phase is done, there is no need to scan the entire memory anymore. We know that all live objects are in half B, so we can simply forget about half A completely. From now on, all new objects are allocated in half B. Until the next garbage collection cycle, when all live objects are copied to half A, and we forget about half B.
+
     TODO :-
-        * Build using makefile. Build as static library. 
+        * Scan the stack, data (initialized and bss) and heap to find pointers pointing to a allocated object.
+            * Similar to finding any reference. 
+        * Build as static library. 
         * Add simple documentation. 
 */
 
@@ -111,8 +120,39 @@ void test_1() {
     leak_detect.report_leaked_objects();
 }
 
+long long i, j;
+int *ptr;
+double k = 2.5;
+
+void test_2() {
+    long long ptr;
+    struct node_t {
+        node_t *next;
+    };
+    field_info_t infos1[] = {
+        FIELD_INFO(node_t, next, data_type_t::OBJ_PTR, node_t)
+    };
+    conservative_leak_detector ld(new console_printer());
+    ld.register_addr_of_global_variables(&ptr);
+    ld.register_addr_of_global_variables(&i);
+    ld.register_addr_of_global_variables(&j);
+    ld.register_addr_of_global_variables(&k);
+    ld.register_struct("node_t", sizeof(node_t), infos1, 
+                    sizeof(infos1) / sizeof(field_info_t));
+    ld.print_structure_db();
+
+    node_t *node1 = (node_t*) ld.xcalloc("node_t", 1);
+    // node_t *node2 = (node_t*) ld.xcalloc("node_t", 1);
+
+    ptr = (long long)node1;
+
+    ld.print_object_db();
+    ld.run();
+    ld.report_leaked_objects();
+}
+
 int main() {
-    test_1();
+    test_2();
 }
 
 /*
